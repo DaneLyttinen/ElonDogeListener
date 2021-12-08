@@ -57,23 +57,24 @@ def api_order(buying_string, a_signature):
     print("bought:", data)
 
 def buy_doge():
-    y = int(datetime.datetime.now().timestamp() * 1000)
-    dataQueryString = "recWindow=2000&timestamp=" + str(y)
-    a_signature = hmac.new(sKey.encode('utf-8'), dataQueryString.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
-    balance = api_coins()
-
-    price = api_price()
-
-    test_amount = float(balance) * 0.95
-    buying_amount = round(test_amount / float(price))
-    #buying_amount = 200
-    date = int(datetime.datetime.now().timestamp() * 1000)
-    buying_string = "symbol=DOGEBTC&side=BUY&type=MARKET&quantity=" + str(buying_amount) +"&timestamp=" + str(date)
-    a_signature = signature(buying_string)
-
-    print("buying=", buying_amount)
-    pushbullet_message("Bought Doge", "bought " + str(buying_amount) +" Doge")
-    api_order(buying_string, a_signature)
+    try:
+        y = int(datetime.datetime.now().timestamp() * 1000)
+        dataQueryString = "recWindow=2000&timestamp=" + str(y)
+        a_signature = hmac.new(sKey.encode('utf-8'), dataQueryString.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
+        balance = api_coins()
+        price = api_price()
+        test_amount = float(balance) * 0.95
+        buying_amount = round(test_amount / float(price))
+        #buying_amount = 200
+        date = int(datetime.datetime.now().timestamp() * 1000)
+        buying_string = "symbol=DOGEBTC&side=BUY&type=MARKET&quantity=" + str(buying_amount) +"&timestamp=" + str(date)
+        a_signature = signature(buying_string)
+        print("buying=", buying_amount)
+        pushbullet_message("Bought Doge", "bought " + str(buying_amount) +" Doge")
+        api_order(buying_string, a_signature)
+        
+    except Exception as e:
+        pushbullet_message("Error occured", e.message)
 
 class StreamListener(tweepy.StreamListener):
     def on_status(self, status):
@@ -82,14 +83,20 @@ class StreamListener(tweepy.StreamListener):
     def on_error(self, status_code):
         print("Error occured " + str(status_code))
         pushbullet_message("Error occured", str(status_code))
-
-
+def start_stream(api):
+    while True:
+        try:
+            stream_listener = StreamListener()
+            stream = tweepy.Stream(auth=api.auth, listener=stream_listener)
+            stream.filter(track=["doge", "DOGE", "Doge"])
+        except Exception as e:
+            pushbullet_message("Error occured", str(e))
+            continue
 if __name__ == "__main__":
     auth = tweepy.OAuthHandler(TWITTER_APP_KEY, TWITTER_APP_SECRET)
     auth.set_access_token(TWITTER_KEY, TWITTER_SECRET)
     api = tweepy.API(auth)
 
-    stream_listener = StreamListener()
-    stream = tweepy.Stream(auth=api.auth, listener=stream_listener)
-    stream.filter(track=["doge", "DOGE", "Doge"])
+    start_stream(api)
+    print("stream started")
 
